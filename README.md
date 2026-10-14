@@ -1,3 +1,5 @@
+https://github.com/user-attachments/assets/be200498-eb21-44ae-877d-9dc2346229a4
+
 # Dashboard Saham
 
 A self-hosted dashboard for the Indonesian stock market (IDX) and personal finance, by Moraine.
