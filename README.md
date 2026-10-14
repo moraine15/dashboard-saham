@@ -1,4 +1,4 @@
-https://github.com/user-attachments/assets/be200498-eb21-44ae-877d-9dc2346229a4
+https://github.com/user-attachments/assets/13b8a105-a731-42e4-91de-cc4aa9b0fc0a
 
 # Dashboard Saham
 
