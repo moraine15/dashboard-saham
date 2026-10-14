@@ -1,0 +1,10 @@
+flask>=3.0,<4
+waitress>=3.0,<4
+yfinance>=0.2.54,<2
+pandas>=2.2,<4
+numpy>=1.26,<3
+requests>=2.31,<3
+
+# Optional extras, install only if you use them:
+#   pip install zeroconf    # MDNS_NAME: announce http://<name>.local on the network
+#   pip install anthropic   # STOCK_AI_PROVIDER=anthropic: the Claude API

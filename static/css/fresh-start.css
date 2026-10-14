@@ -1,0 +1,20 @@
+/* Start-up page shown while old browser caches are cleared. */
+@layer views {
+  main {
+    display: grid;
+    min-height: 100dvh;
+    place-content: center;
+    justify-items: start;
+    gap: var(--space-3);
+    padding: var(--space-6) var(--space-4);
+  }
+
+  h1 {
+    font-size: var(--fs-kpi);
+  }
+
+  p {
+    margin: 0;
+    color: var(--muted);
+  }
+}

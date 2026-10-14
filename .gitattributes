@@ -1,0 +1,11 @@
+# Text files are stored with LF and checked out with LF on every system.
+* text=auto eol=lf
+
+# Windows launchers need CRLF; shell scripts need LF.
+*.bat text eol=crlf
+*.sh text eol=lf
+
+# Binary assets
+*.png binary
+*.ico binary
+*.woff2 binary

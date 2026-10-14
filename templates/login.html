@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#000000">
+  <title>{{ 'Masuk' if owner_configured else 'Pengaturan awal' }} · {{ app_name }}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/icon-32.png">
+  <link rel="preload" href="/static/fonts/IBMPlexSans-Regular-Latin1.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/css/tokens.css?v={{ asset_v('css/tokens.css') }}">
+  <link rel="stylesheet" href="/static/css/base.css?v={{ asset_v('css/base.css') }}">
+  <link rel="stylesheet" href="/static/css/login.css?v={{ asset_v('css/login.css') }}">
+  <script src="/static/ui-prefs.js?v={{ asset_v('ui-prefs.js') }}"></script>
+  <script src="/static/theme-boot.js?v={{ asset_v('theme-boot.js') }}"></script>
+  <script defer src="/static/login.js?v={{ asset_v('login.js') }}"></script>
+</head>
+<body data-owner-configured="{{ '1' if owner_configured else '0' }}">
+  <main class="login-shell">
+    <section class="login-card" aria-labelledby="loginTitle">
+      <div class="login-brand">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32"/><polyline points="6,22 12,16 17,19 26,9"/></svg>
+        <div class="brand-text"><span class="login-name">{{ app_name }}</span><span class="brand-by">{{ app_credit }}</span></div>
+      </div>
+{% if owner_configured %}
+      <h1 id="loginTitle">Masuk</h1>
+      <p class="subtitle">Dashboard pribadi. Data dimuat setelah berhasil masuk.</p>
+      <form id="loginForm" method="post">
+        <label for="password">Password</label>
+        <div class="password-row">
+          <input id="password" name="password" type="password" minlength="1" required autofocus autocomplete="current-password">
+          <button id="showPassword" type="button" aria-controls="password" aria-pressed="false">Lihat</button>
+        </div>
+        <label class="role-row"><input id="adminRole" type="checkbox"> Masuk sebagai administrator</label>
+        <button id="submitButton" class="primary" type="submit">Masuk</button>
+        <p id="message" role="alert" aria-live="polite"></p>
+      </form>
+{% elif setup_local %}
+      <h1 id="loginTitle">Pengaturan awal</h1>
+      <p class="subtitle">Beri nama aplikasi ini dan buat password pemilik. Langkah ini hanya sekali.</p>
+      <form id="setupForm" method="post">
+        <label for="setupName">Nama aplikasi</label>
+        <input id="setupName" type="text" maxlength="40" value="{{ app_name }}" required autocomplete="off">
+        <label for="setupPassword">Password pemilik (minimal 8 karakter)</label>
+        <input id="setupPassword" type="password" minlength="8" required autocomplete="new-password">
+        <label for="setupPassword2">Ulangi password</label>
+        <input id="setupPassword2" type="password" minlength="8" required autocomplete="new-password">
+        <label for="setupCode">Kode pengaturan</label>
+        <input id="setupCode" type="text" required autocomplete="one-time-code" spellcheck="false" placeholder="XXXX-XXXX">
+        <p class="subtitle">Kode ini tampil di jendela server saat aplikasi dijalankan.</p>
+        <button id="setupButton" class="primary" type="submit">Simpan &amp; masuk</button>
+        <p id="setupMessage" role="alert" aria-live="polite"></p>
+      </form>
+{% else %}
+      <h1 id="loginTitle">Pengaturan awal</h1>
+      <p class="subtitle">Pengaturan awal hanya bisa dilakukan dari komputer yang menjalankan aplikasi. Buka alamat aplikasi ini di komputer tersebut.</p>
+{% endif %}
+    </section>
+  </main>
+</body>
+</html>

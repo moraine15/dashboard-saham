@@ -1,0 +1,208 @@
+/* Element defaults: page, type, links, focus and form controls. */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    min-height: 100dvh;
+    margin: 0;
+    overflow-x: hidden;
+    color: var(--ink);
+    background: var(--bg);
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    margin: 0;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  p {
+    margin: 0 0 var(--space-2);
+  }
+
+  b,
+  strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  a {
+    color: var(--ink);
+    text-underline-offset: 3px;
+  }
+
+  code,
+  kbd {
+    font-family: inherit;
+    font-size: var(--fs-label);
+  }
+
+  code {
+    padding: 0 var(--space-1);
+    background: var(--raise);
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  ::selection {
+    color: var(--bg);
+    background: var(--ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border: 3px solid var(--bg);
+    background: var(--rule);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted);
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  button {
+    display: inline-flex;
+    min-height: 36px;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-4);
+    color: var(--ink);
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: 0;
+    cursor: pointer;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: color var(--ease), background-color var(--ease), border-color var(--ease);
+  }
+
+  button:hover {
+    border-color: var(--ink);
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    opacity: .45;
+  }
+
+  input,
+  select,
+  textarea {
+    min-height: 36px;
+    padding: var(--space-1) var(--space-3);
+    color: var(--ink);
+    background: var(--raise);
+    border: 0;
+    border-bottom: 1px solid var(--rule);
+    border-radius: 2px 2px 0 0;
+    transition: border-color var(--ease);
+  }
+
+  input:hover,
+  select:hover,
+  textarea:hover,
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-bottom-color: var(--ink);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--muted);
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 0;
+    padding: 0;
+    accent-color: var(--ink);
+  }
+
+  input[type="file"] {
+    padding: var(--space-1) 0;
+    background: transparent;
+    border: 0;
+  }
+
+  table {
+    border-collapse: collapse;
+  }
+
+  ul {
+    margin: 0;
+  }
+
+  /* The app mark on the login and start pages, drawn in the theme's colours. */
+  .brand-mark {
+    width: 40px;
+    height: 40px;
+    flex: none;
+  }
+
+  .brand-mark rect {
+    fill: var(--ink);
+  }
+
+  .brand-mark polyline {
+    fill: none;
+    stroke: var(--bg);
+    stroke-width: 3;
+    stroke-linecap: square;
+  }
+
+  /* The app name with the fixed credit underneath (header, login, start page). */
+  .brand-text {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  .brand-by {
+    color: var(--muted);
+    font-size: var(--fs-label);
+    font-weight: 400;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+}

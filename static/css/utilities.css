@@ -1,0 +1,117 @@
+/* State and helper classes. This layer is last, so it wins over components. */
+@layer utilities {
+  [hidden],
+  .hidden {
+    display: none !important;
+  }
+
+  /* Collapsed sections hide everything but their heading. */
+  .card.collapsed > :not(h3) {
+    display: none !important;
+  }
+
+  .sr-only {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+    white-space: nowrap;
+  }
+
+  .muted {
+    color: var(--muted);
+  }
+
+  .up {
+    color: var(--up);
+  }
+
+  .down {
+    color: var(--down);
+  }
+
+  .warn {
+    color: var(--warn);
+  }
+
+  .tiny {
+    font-size: var(--fs-label);
+    line-height: 1.5;
+  }
+
+  .form-msg.is-error {
+    color: var(--down);
+  }
+
+  .form-msg.is-ok {
+    color: var(--up);
+  }
+
+  .h-end {
+    margin-left: auto;
+  }
+
+  .h-gap {
+    margin-left: var(--space-2);
+  }
+
+  .mt-xs {
+    margin-top: var(--space-1);
+  }
+
+  .mt-s {
+    margin-top: var(--space-2);
+  }
+
+  .mt-m {
+    margin-top: var(--space-3);
+  }
+
+  .mt-l {
+    margin-top: var(--space-4);
+  }
+
+  .btn-inline {
+    width: auto;
+    max-width: max-content;
+  }
+
+  .set-field.narrow {
+    max-width: 360px;
+  }
+
+  .chart.chart-short {
+    height: 240px;
+  }
+
+  .empty-row {
+    padding: var(--space-3) 0;
+    color: var(--muted);
+  }
+
+  /* Privacy mode blurs amounts globally or per page. */
+  body.priv-hide .priv,
+  .priv-on .priv {
+    filter: blur(7px);
+    pointer-events: none;
+    user-select: none;
+  }
+
+  body.priv-hide .priv-inp,
+  .priv-on .priv-inp {
+    -webkit-text-security: disc;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      transition-duration: 0s !important;
+    }
+  }
+}

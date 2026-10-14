@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#000000">
+<title>{{ app_name }}</title>
+<meta name="application-name" content="{{ app_name }}">
+<link rel="icon" type="image/svg+xml" href="/static/icon.svg" id="favicon">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/icon-32.png">
+<link rel="preload" href="/static/fonts/IBMPlexSans-Regular-Latin1.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/fonts/IBMPlexSans-SemiBold-Latin1.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/static/css/tokens.css?v={{ asset_v('css/tokens.css') }}">
+<link rel="stylesheet" href="/static/css/base.css?v={{ asset_v('css/base.css') }}">
+<link rel="stylesheet" href="/static/css/shell.css?v={{ asset_v('css/shell.css') }}">
+<link rel="stylesheet" href="/static/css/components.css?v={{ asset_v('css/components.css') }}">
+<link rel="stylesheet" href="/static/css/views.css?v={{ asset_v('css/views.css') }}">
+<link rel="stylesheet" href="/static/css/utilities.css?v={{ asset_v('css/utilities.css') }}">
+<script src="/static/ui-prefs.js?v={{ asset_v('ui-prefs.js') }}"></script>
+<script src="/static/theme-boot.js?v={{ asset_v('theme-boot.js') }}"></script>
+<script src="/static/sync-merge.js?v={{ asset_v('sync-merge.js') }}"></script>
+<script src="/static/sync.js?v={{ asset_v('sync.js') }}"></script>
+<script src="/static/boot-guard.js?v={{ asset_v('boot-guard.js') }}"></script>
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js" integrity="sha384-JZigAjwiaZtkUbA44CWkPaT3iBb/mU5pO6QOANp+OqHd4q+1+7MG1kzp2OOP9ZfP" crossorigin="anonymous"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Langsung ke konten</a>
+
+<!-- SPLASH LOADING -->
+<div id="splash">
+  <div class="splash-text muted">Memuat…</div>
+</div>
+
+<!-- COMMAND PALETTE -->
+<div id="palette" role="dialog" aria-modal="true" aria-label="Pencarian cepat">
+  <div class="pal-box">
+    <input id="palInput" type="text" placeholder="Cari saham atau lompat ke tab…" autocomplete="off" aria-label="Cari saham atau tab" aria-controls="palList">
+    <div class="pal-list" id="palList" role="listbox" aria-label="Hasil pencarian"></div>
+    <div class="pal-hint">↑↓ pilih · Enter buka · Esc tutup · Ctrl+K buka atau tutup</div>
+  </div>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<!-- SELL FROM PORTFOLIO DIALOG -->
+<div id="sellModal" class="modal-overlay" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="sellTitle">
+    <h2 id="sellTitle" class="modal-title">Jual Saham <span id="sellName">-</span></h2>
+    <div class="set-grid">
+      <div class="set-field"><label for="sellLots">Jumlah lot (maks <span id="sellMax">0</span>)</label><input id="sellLots" type="number" step="1" min="1"></div>
+      <div class="set-field"><label for="sellPrice">Harga jual (Rp)</label><input id="sellPrice" type="number" step="any"></div>
+      <div class="set-field"><label for="sellFee">Fee jual (Rp, opsional)</label><input id="sellFee" type="number" step="any" placeholder="0"></div>
+    </div>
+    <div id="sellEst" class="tiny muted mt-s" aria-live="polite"></div>
+    <div class="modal-actions">
+      <button id="sellCancel" class="ctool">Batal</button>
+      <button id="sellConfirm" class="calcBtn btn-inline">Jual &amp; catat</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHARED CONFIRM DIALOG -->
+<div id="confirmModal" class="modal-overlay" hidden><div class="modal-box" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmText"><h2 id="confirmTitle" class="modal-title"></h2><p id="confirmText" class="tiny"></p><div class="modal-actions"><button id="confirmCancel" type="button" class="ctool">Batal</button><button id="confirmOk" type="button" class="calcBtn btn-inline">OK</button></div></div></div>
+
+<header class="topbar">
+  <button type="button" id="railToggle" class="iconbtn rail-toggle" aria-controls="workspaceRail" aria-expanded="false" aria-label="Buka navigasi"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  <div class="brand"><div class="brand-text"><h1 class="brand-title">{{ app_name }}</h1><span class="brand-by">{{ app_credit }}</span></div></div>
+  <div class="topbar-right">
+    <div class="search">
+      <input id="tickerInput" type="text" size="8" placeholder="Kode saham (mis. BBCA, BBRI)…" autocomplete="off" aria-label="Cari & tambah kode saham">
+      <button id="addBtn">+ Tambah</button>
+      <button id="refreshBtn" title="Muat ulang data sekarang" aria-label="Muat ulang data">↻</button>
+      <span class="auto-wrap">
+        <label class="auto-toggle" title="Aktifkan/matikan auto-refresh">
+          <input type="checkbox" id="autoChk"> Auto
+        </label>
+        <input id="autoMin" type="number" min="0.5" step="0.5" value="5" title="Interval (menit)" aria-label="Interval auto-refresh (menit)">
+        <span class="tiny muted">mnt</span>
+      </span>
+    </div>
+    <span id="syncChip" class="sync-chip status-line" title="Status sinkronisasi data" aria-live="polite"><span class="sync-delay">Data tertunda ±15 menit</span><span class="sync-dot"></span><span class="sync-txt">Tersimpan</span></span>
+    <button id="palBtn" class="iconbtn" title="Cari saham atau lompat ke tab (Ctrl+K)" aria-label="Cari saham atau tab" aria-keyshortcuts="Control+K"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><span class="btn-label">Cari</span><kbd aria-hidden="true">Ctrl K</kbd></button>
+    <button id="hideBtn" class="iconbtn" title="Privasi: sensor semua angka" aria-label="Privasi: sensor semua angka" aria-pressed="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="12" cy="12" r="2.5"/></svg><span class="btn-label">Privasi</span></button>
+    <button id="gearBtn" class="iconbtn" title="Pengaturan" aria-label="Pengaturan"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span class="btn-label">Pengaturan</span></button>
+    <button id="avatarBtn" class="avatar-btn noimg" title="Profil" aria-label="Profil"><span>M</span></button>
+  </div>
+</header>
+<div class="workspace-shell">
+  <aside class="workspace-rail" id="workspaceRail" aria-label="Navigasi workspace">
+    <div class="modebar" role="group" aria-label="Ruang kerja">
+      <button type="button" class="modebtn active" data-mode="saham" aria-pressed="true">Investasi</button>
+      <button type="button" class="modebtn" data-mode="private" aria-pressed="false">Pribadi</button>
+    </div>
+
+    <nav class="workspace-nav tabs" role="tablist" aria-label="Navigasi utama" aria-orientation="vertical">
+      <button type="button" class="tab" id="tabBtn-home" role="tab" data-tab="home" data-group="both" aria-controls="tabHome" aria-selected="false" tabindex="-1">Ringkasan</button>
+      <button type="button" class="tab" id="tabBtn-analisa" role="tab" data-tab="analisa" data-group="saham" aria-controls="tabAnalisa" aria-selected="false" tabindex="-1">Analisis</button>
+      <button type="button" class="tab" id="tabBtn-pasar" role="tab" data-tab="pasar" data-group="saham" aria-controls="tabPasar" aria-selected="false" tabindex="-1">Pasar</button>
+      <button type="button" class="tab" id="tabBtn-porto" role="tab" data-tab="porto" data-group="saham" aria-controls="tabPorto" aria-selected="false" tabindex="-1">Portofolio</button>
+      <button type="button" class="tab" id="tabBtn-screener" role="tab" data-tab="screener" data-group="saham" aria-controls="tabScreener" aria-selected="false" tabindex="-1">Screener</button>
+      <button type="button" class="tab" id="tabBtn-alat" role="tab" data-tab="alat" data-group="saham" aria-controls="tabAlat" aria-selected="false" tabindex="-1">Alat</button>
+      <button type="button" class="tab" id="tabBtn-berita" role="tab" data-tab="berita" data-group="saham" aria-controls="tabBerita" aria-selected="false" tabindex="-1">Berita</button>
+      <button type="button" class="tab" id="tabBtn-keuangan" role="tab" data-tab="keuangan" data-group="private" aria-controls="tabKeuangan" aria-selected="false" tabindex="-1">Keuangan</button>
+      <button type="button" class="tab" id="tabBtn-barang" role="tab" data-tab="barang" data-group="private" aria-controls="tabBarang" aria-selected="false" tabindex="-1">Barang</button>
+    </nav>
+
+    <section class="watchlist" aria-labelledby="watchlistTitle">
+      <h2 id="watchlistTitle" class="rail-heading">Watchlist</h2>
+      <ul id="watchlist"></ul>
+    </section>
+  </aside>
+  <div id="railScrim" class="rail-scrim" hidden></div>
+
+  <section class="workspace-content">
+    <div id="autoInfo" class="auto-info tiny muted"></div>
+    <main class="main" id="main">
+    <aside id="photoCardLeft" class="decor-photo-card" data-side="left" data-size="medium" aria-hidden="true">
+      <img id="photoCardLeftImg" alt="">
+    </aside>
+    <div id="dashboardStage" class="dashboard-stage">
+    <div id="emptyState" class="empty">
+      <h2>Watchlist masih kosong</h2>
+      <p>Tambahkan kode saham di atas (mis. <code>BBCA</code>, <code>BBRI</code>) untuk mulai analisis.</p>
+      <p class="tiny muted">Kode IDX otomatis ditambah <code>.JK</code>. Bisa juga ketik manual seperti <code>BBCA.JK</code>.</p>
+    </div>
+
+    <div id="detail" class="hidden">
+      <!-- QUOTE HEADER -->
+      <section class="quote card">
+        <div>
+          <div class="qname" id="qName">-</div>
+          <div class="qticker muted" id="qTicker">-</div>
+        </div>
+        <div class="qprice">
+          <span id="qPrice">-</span>
+          <span id="qChange" class="chg">-</span>
+        </div>
+        <div class="qmeta tiny muted" id="qMeta">-</div>
+      </section>
+
+      <!-- TAB HOME -->
+      <div id="tabHome" class="hidden" role="tabpanel" aria-labelledby="tabBtn-home" tabindex="-1">
+        <h2 class="view-title sr-only">Ringkasan</h2>
+        <div id="homeWidgets" class="home-widgets">
+          <section class="card card-focal home-widget" data-widget="ringkasan">
+            <h3>Ringkasan</h3>
+            <div class="home-grid kpi-row has-focal" id="homeStats"><span class="tiny muted">Memuat…</span></div>
+          </section>
+          <section class="card home-widget" data-widget="movers"><h3>Pergerakan Terbesar Watchlist</h3><div class="home-movers" id="homeMovers"></div></section>
+          <section class="card home-widget" data-widget="pasar"><h3>Pasar</h3><div class="home-movers" id="homeMarket"></div></section>
+        </div>
+      </div>
+
+      <div id="tabAnalisa" role="tabpanel" aria-labelledby="tabBtn-analisa" tabindex="-1">
+        <h2 class="view-title sr-only">Analisis saham</h2>
+
+      <!-- AI -->
+      <section class="card" id="aiCard">
+        <h3>Analisis AI <a href="#" id="aiSettingsLink" class="tiny muted h-end">Atur di Pengaturan</a></h3>
+        <div class="ai-controls">
+          <button id="aiAnalyzeBtn" class="calcBtn ai-btn">Buat Analisis AI</button>
+          <div class="ai-ask">
+            <input id="aiQuestion" type="text" aria-label="Pertanyaan tentang saham ini" placeholder="Tanya tentang saham ini… (mis. apakah valuasinya murah?)">
+            <button id="aiAskBtn">Tanya</button>
+          </div>
+        </div>
+        <div id="aiOutput" class="ai-output tiny muted">AI menggabungkan teknikal + fundamental + berita. Klik tombol atau ajukan pertanyaan.</div>
+      </section>
+
+      <div class="grid2">
+        <!-- SIGNAL -->
+        <section class="card">
+          <h3>Sinyal Multi-Perspektif (Teknikal) <span class="hlp" data-help="signal" tabindex="0" role="button" aria-label="Penjelasan">?</span></h3>
+          <div class="signal">
+            <div class="gauge"><div id="gaugeFill" class="gaugeFill"></div><span id="signalScore">0</span></div>
+            <div>
+              <div id="signalLabel" class="signalLabel">-</div>
+              <div class="tiny muted">Skor agregat −100 (jual) … +100 (beli) dari 6 indikator.</div>
+            </div>
+          </div>
+          <ul id="signalList" class="signalList"></ul>
+          <p class="tiny warn">Sinyal teknikal = alat bantu timing, BUKAN jaminan. Selalu gabung dengan fundamental & manajemen risiko.</p>
+        </section>
+
+        <!-- KEY METRICS -->
+        <section class="card">
+          <h3>Metrik Kunci (Teknikal)</h3>
+          <table class="metrics" id="techTable"></table>
+        </section>
+      </div>
+
+      <!-- CHART -->
+      <section class="card">
+        <h3>Grafik Harga
+          <select id="rangeSel" title="Periode · Interval (timeframe)" aria-label="Periode dan interval grafik" class="h-end">
+            <optgroup label="Intraday">
+              <option value="1d|5m">1 Hari · 5 menit</option>
+              <option value="5d|15m">5 Hari · 15 menit</option>
+              <option value="1mo|60m">1 Bulan · 1 jam</option>
+            </optgroup>
+            <optgroup label="Harian">
+              <option value="1mo|1d">1 Bulan · Harian</option>
+              <option value="3mo|1d">3 Bulan · Harian</option>
+              <option value="6mo|1d">6 Bulan · Harian</option>
+              <option value="1y|1d" selected>1 Tahun · Harian</option>
+              <option value="2y|1d">2 Tahun · Harian</option>
+            </optgroup>
+            <optgroup label="Mingguan">
+              <option value="1y|1wk">1 Tahun · Mingguan</option>
+              <option value="2y|1wk">2 Tahun · Mingguan</option>
+              <option value="5y|1wk">5 Tahun · Mingguan</option>
+            </optgroup>
+            <optgroup label="Bulanan">
+              <option value="5y|1mo">5 Tahun · Bulanan</option>
+              <option value="max|1mo">Maks · Bulanan</option>
+            </optgroup>
+          </select>
+        </h3>
+        <div class="chart-tools">
+          <button class="ctool active" data-tool="none">Kursor</button>
+          <button class="ctool" data-tool="trend">Garis Tren</button>
+          <button class="ctool" data-tool="hline">Garis Horizontal</button>
+          <button class="ctool danger" id="ctoolClear">Hapus</button>
+          <span class="tiny muted" id="ctoolHint"></span>
+        </div>
+        <div class="ma-settings">
+          <span class="tiny muted">Indikator:</span>
+          <label class="ma-chip" data-ma="5"><input type="checkbox" data-ma="5"> MA5</label>
+          <label class="ma-chip" data-ma="10"><input type="checkbox" data-ma="10"> MA10</label>
+          <label class="ma-chip" data-ma="20"><input type="checkbox" data-ma="20"> MA20</label>
+          <label class="ma-chip" data-ma="50"><input type="checkbox" data-ma="50"> MA50</label>
+          <label class="ma-chip" data-ma="100"><input type="checkbox" data-ma="100"> MA100</label>
+          <label class="ma-chip" data-ma="200"><input type="checkbox" data-ma="200"> MA200</label>
+          <label class="ma-chip" id="maBB"><input type="checkbox" id="bbChk"> Bollinger</label>
+          <label class="ma-chip" id="maType"><input type="checkbox" id="emaChk"> Pakai EMA</label>
+        </div>
+        <div id="chart" class="chart"></div>
+        <div id="chartLegend" class="chart-legend"></div>
+        <div id="rsiChart" class="chart small"></div>
+        <div id="macdChart" class="chart small"></div>
+        <div class="tiny muted">Atas: harga dan MA. Tengah: RSI(14) dengan garis 30/70. Bawah: histogram MACD.</div>
+      </section>
+
+      <!-- FUNDAMENTALS -->
+      <section class="card">
+        <h3>Fundamental & Valuasi <span class="hlp" data-help="fundNote" tabindex="0" role="button" aria-label="Penjelasan">?</span></h3>
+        <table class="metrics" id="fundTable"></table>
+      </section>
+
+      <!-- BENCHMARK -->
+      <section class="card" id="benchCard">
+        <details class="entry">
+          <summary>Atur acuan</summary>
+        <div class="bench-scope">
+          <span class="tiny muted">Simpan setelan untuk:</span>
+          <div class="seg">
+            <button class="segbtn active" data-scope="all">Semua saham</button>
+            <button class="segbtn" data-scope="stock">Saham ini (<span id="benchTk">-</span>)</button>
+          </div>
+          <button id="benchResetAll" class="ctool danger h-end">↺ Reset semua ke default</button>
+        </div>
+        <div class="bench-grid" id="benchGrid"></div>
+        <p class="tiny muted card-note">Prioritas nilai: <b>setelan per-saham</b>, lalu <b>setelan semua saham</b>, lalu <b>default</b>. Tombol ↺ di tiap metrik mengembalikan metrik itu ke default pada cakupan terpilih.</p>
+        </details>
+      </section>
+
+      <!-- QUARTERLY RESULTS -->
+      <section class="card" id="finHistCard">
+        <h3>Riwayat Kinerja (Kuartalan) <span class="hlp" data-help="finHist" tabindex="0" role="button" aria-label="Penjelasan">?</span></h3>
+        <div id="finHist"></div>
+      </section>
+
+      <section class="card" id="cmpCard">
+        <h3>Bandingkan Saham <span class="tiny muted">(maks 4)</span></h3>
+        <div class="fin-form">
+          <label class="fin-lbl">Kode saham<input id="cmpInput" placeholder="mis. BBCA" autocomplete="off"></label>
+          <button id="cmpAdd">+ Tambah</button>
+          <button id="cmpClear" class="ctool">Kosongkan</button>
+        </div>
+        <div class="porto-scroll"><table class="porto-table" id="cmpTable"></table></div>
+      </section>
+
+      </div><!-- /tabAnalisa -->
+
+      <!-- TAB ALAT -->
+      <div id="tabAlat" class="hidden" role="tabpanel" aria-labelledby="tabBtn-alat" tabindex="-1">
+        <h2 class="view-title sr-only">Alat</h2>
+        <div class="subtabs" role="tablist" aria-label="Alat" id="alatTabs">
+          <button type="button" role="tab" data-sub="ara" id="subtab-alat-ara" aria-controls="sub-alat-ara">ARA / ARB</button>
+          <button type="button" role="tab" data-sub="avgdown" id="subtab-alat-avgdown" aria-controls="sub-alat-avgdown">Average down</button>
+          <button type="button" role="tab" data-sub="posisi" id="subtab-alat-posisi" aria-controls="sub-alat-posisi">Kalkulator posisi</button>
+        </div>
+        <div role="tabpanel" id="sub-alat-ara" data-subpanel="ara" aria-labelledby="subtab-alat-ara" tabindex="-1">
+        <section class="card">
+          <h3>Kalkulator ARA / ARB <span class="tiny muted">(simulasi hingga 14 hari, bisa dikustom per hari)</span></h3>
+          <div class="fin-form">
+            <label class="fin-lbl">Harga awal (Rp)<input id="araStart" type="number" step="any" placeholder="mis. 1000"></label>
+            <label class="fin-lbl">Jumlah lot (opsional)<input id="araLot" type="number" step="1" placeholder="mis. 10"></label>
+            <button id="araCalc">Hitung</button>
+            <button id="araAllAra" class="ctool">Semua ARA</button>
+            <button id="araAllArb" class="ctool">Semua ARB</button>
+            <button id="araReset" class="ctool">Reset</button>
+          </div>
+          <div id="araSlots" class="ara-slots"></div>
+          <div class="porto-scroll"><table class="porto-table" id="araTable"></table></div>
+          <div id="araNote" class="pf-notes"></div>
+        </section>
+        </div>
+        <div role="tabpanel" id="sub-alat-avgdown" data-subpanel="avgdown" aria-labelledby="subtab-alat-avgdown" tabindex="-1">
+        <section class="card">
+          <h3>Kalkulator Average Down <span class="tiny muted">(1 lot = 100 lembar)</span></h3>
+          <p class="tiny muted">Simulasi harga rata-rata (average) <b>baru</b> setelah membeli lot tambahan. Isi posisi Anda sekarang lalu rencana beli berikutnya.</p>
+          <div class="fin-form">
+            <label class="fin-lbl">Harga rata-rata sekarang (Rp)<input id="adAvg" type="number" step="any" placeholder="mis. 1000"></label>
+            <label class="fin-lbl">Lot dimiliki<input id="adLot" type="number" step="any" placeholder="mis. 10"></label>
+            <label class="fin-lbl">Harga beli baru (Rp)<input id="adPrice" type="number" step="any" placeholder="mis. 800"></label>
+            <label class="fin-lbl">Lot dibeli<input id="adBuy" type="number" step="any" placeholder="mis. 10"></label>
+          </div>
+          <div class="fin-form">
+            <label class="fin-lbl">Harga pasar sekarang (Rp, opsional)<input id="adMkt" type="number" step="any" placeholder="utk hitung untung/rugi"></label>
+            <label class="fin-lbl">Biaya beli+jual total (%, opsional)<input id="adFee" type="number" step="any" placeholder="mis. 0.3"></label>
+            <button id="adCalc">Hitung</button>
+            <button id="adReset" class="ctool">Reset</button>
+          </div>
+          <div id="adOut" class="porto-summary"></div>
+          <div id="adNote" class="pf-notes"></div>
+        </section>
+        </div>
+        <div role="tabpanel" id="sub-alat-posisi" data-subpanel="posisi" aria-labelledby="subtab-alat-posisi" tabindex="-1">
+        <section class="card">
+          <h3>Kalkulator posisi</h3>
+          <p id="calcSource" class="muted tiny"></p>
+          <div class="calc-grid">
+
+            <!-- FAIR VALUE -->
+            <div class="calc">
+              <h4>Harga Wajar (PBV & PER)</h4>
+              <label>BVPS (Nilai Buku/Saham) <input id="fvBvps" type="number" step="any"></label>
+              <label>Target PBV (x) <input id="fvPbv" type="number" step="any" value="2.5"></label>
+              <label>EPS (Laba/Saham) <input id="fvEps" type="number" step="any"></label>
+              <label>Target PER (x) <input id="fvPer" type="number" step="any" value="15"></label>
+              <button class="calcBtn" data-calc="fv">Hitung</button>
+              <div class="result" id="fvResult"></div>
+              <p class="tiny muted">BVPS & EPS terisi otomatis dari data; ubah sesuai estimasi Anda.</p>
+            </div>
+
+            <!-- DIVIDEND -->
+            <div class="calc">
+              <h4>Kalkulator Dividen</h4>
+              <label>Jumlah Lot (1 lot = 100 lembar) <input id="dvLot" type="number" step="1" value="10"></label>
+              <label>Dividen per Saham (Rp) <input id="dvDps" type="number" step="any"></label>
+              <label>Harga Beli per Saham (Rp) <input id="dvPrice" type="number" step="any"></label>
+              <label class="chk"><input id="dvTax" type="checkbox" checked> Potong pajak final 10%</label>
+              <button class="calcBtn" data-calc="dv">Hitung</button>
+              <div class="result" id="dvResult"></div>
+            </div>
+
+            <!-- POSITION / LOT -->
+            <div class="calc">
+              <h4>Kalkulator Posisi / Lot</h4>
+              <label>Jumlah Lot <input id="poLot" type="number" step="1" value="10"></label>
+              <label>Harga Beli (Rp) <input id="poBuy" type="number" step="any"></label>
+              <label>Fee Beli (%) <input id="poFeeBuy" type="number" step="any" value="0.15"></label>
+              <label>Fee Jual (%) <input id="poFeeSell" type="number" step="any" value="0.25"></label>
+              <button class="calcBtn" data-calc="po">Hitung</button>
+              <div class="result" id="poResult"></div>
+              <p class="tiny muted">Fee default ilustratif; sesuaikan dengan sekuritas Anda.</p>
+            </div>
+
+            <!-- PROFIT / RISK -->
+            <div class="calc">
+              <h4>Profit/Loss & Risiko</h4>
+              <label>Jumlah Lot <input id="riLot" type="number" step="1" value="10"></label>
+              <label>Harga Beli (Rp) <input id="riBuy" type="number" step="any"></label>
+              <label>Target Jual (Rp) <input id="riTarget" type="number" step="any"></label>
+              <label>Stop Loss (Rp) <input id="riStop" type="number" step="any"></label>
+              <button class="calcBtn" data-calc="ri">Hitung</button>
+              <div class="result" id="riResult"></div>
+            </div>
+
+          </div>
+        </section>
+        </div>
+      </div>
+
+      <!-- TAB BARANG -->
+      <div id="tabBarang" class="hidden" role="tabpanel" aria-labelledby="tabBtn-barang" tabindex="-1">
+        <h2 class="view-title sr-only">Barang dan proyek</h2>
+        <section class="card">
+          <h3>Barang <span class="tiny muted">(proyek belanja &amp; wishlist)</span></h3>
+          <div class="fin-form">
+            <label class="fin-lbl">Proyek aktif<select id="bgProject"></select></label>
+            <label class="fin-lbl">Proyek baru<input id="bgNewProj" placeholder="mis. Build PC"></label>
+            <button id="bgAddProj">+ Proyek</button>
+            <button id="bgDelProj" class="ctool danger">Hapus proyek</button>
+          </div>
+          <div class="porto-summary kpi-row has-focal" id="bgSummary"></div>
+        </section>
+
+        <section class="card">
+          <h3>Daftar Item</h3>
+          <details class="entry">
+            <summary>Tambah item</summary>
+          <div class="fin-form">
+            <label class="fin-lbl">Nama item<input id="bgItemName" placeholder="mis. GPU RTX, Knalpot"></label>
+            <label class="fin-lbl">Harga satuan<input id="bgItemPrice" type="number" step="any" placeholder="mis. 5000000"></label>
+            <label class="fin-lbl">Qty<input id="bgItemQty" type="number" step="1" placeholder="mis. 1" value="1"></label>
+            <label class="fin-lbl">Status<select id="bgItemStatus"><option value="plan">Rencana</option><option value="bought">Sudah beli</option></select></label>
+            <button id="bgAddItem">+ Item</button>
+          </div>
+          </details>
+          <div class="porto-scroll"><table class="porto-table" id="bgTable"></table></div>
+        </section>
+
+        <div class="grid2">
+          <section class="card">
+            <h3>Dampak ke Keuangan</h3>
+            <div id="bgFinance" class="tiny"></div>
+            <div class="fin-form mt-s">
+              <label class="fin-lbl">Bayar item "beli" dari<select id="bgPayAcc"></select></label>
+              <button id="bgPayBtn">Catat pembelian ke Keuangan</button>
+            </div>
+            <div class="fin-form">
+              <label class="fin-lbl">Nabung / bulan<input id="bgSave" type="number" step="any"></label>
+              <button id="bgSaveCalc" class="ctool">Estimasi waktu nabung</button>
+            </div>
+            <div id="bgSaveResult" class="tiny muted"></div>
+          </section>
+          <section class="card" id="bgAiCard">
+            <h3>Saran AI</h3>
+            <button id="bgAiBtn" class="calcBtn ai-btn">Minta saran prioritas / hemat</button>
+            <div id="bgAiOut" class="ai-output tiny muted">AI membantu prioritas item dan estimasi anggaran. Nyalakan AI di Pengaturan.</div>
+          </section>
+        </div>
+      </div>
+
+      <!-- TAB SCREENER -->
+      <div id="tabScreener" class="hidden" role="tabpanel" aria-labelledby="tabBtn-screener" tabindex="-1">
+        <h2 class="view-title sr-only">Screener saham</h2>
+        <section class="card">
+          <h3>Screener Saham (Fundamental) <span class="hlp" data-help="screener" tabindex="0" role="button" aria-label="Penjelasan">?</span></h3>
+          <div class="fin-form">
+            <label class="fin-lbl">PER maks<input id="scPer" type="number" step="any" placeholder="mis. 20"></label>
+            <label class="fin-lbl">PBV maks<input id="scPbv" type="number" step="any" placeholder="mis. 3"></label>
+            <label class="fin-lbl">ROE min %<input id="scRoe" type="number" step="any" placeholder="mis. 15"></label>
+            <label class="fin-lbl">Div Yield min %<input id="scDy" type="number" step="any" placeholder="mis. 4"></label>
+            <label class="fin-lbl">Sektor<select id="scSector"><option value="">Semua</option></select></label>
+            <button id="scScan">Pindai</button>
+            <button id="scPreset" class="ctool">Preset kualitas</button>
+            <button id="scReset" class="ctool">Reset</button>
+          </div>
+          <div id="scInfo" class="tiny muted"></div>
+          <div class="porto-scroll"><table class="porto-table" id="scTable"></table></div>
+        </section>
+      </div>
+
+      <!-- TAB KEUANGAN -->
+      <div id="tabKeuangan" class="hidden" role="tabpanel" aria-labelledby="tabBtn-keuangan" tabindex="-1">
+        <h2 class="view-title sr-only">Keuangan pribadi</h2>
+        <div class="subtabs" role="tablist" aria-label="Keuangan" id="keuanganTabs">
+          <button type="button" role="tab" data-sub="ringkasan" id="subtab-keuangan-ringkasan" aria-controls="sub-keuangan-ringkasan">Ringkasan</button>
+          <button type="button" role="tab" data-sub="transaksi" id="subtab-keuangan-transaksi" aria-controls="sub-keuangan-transaksi">Transaksi</button>
+          <button type="button" role="tab" data-sub="rutin" id="subtab-keuangan-rutin" aria-controls="sub-keuangan-rutin">Rutin</button>
+          <button type="button" role="tab" data-sub="target" id="subtab-keuangan-target" aria-controls="sub-keuangan-target">Target &amp; hutang</button>
+          <button type="button" role="tab" data-sub="akun" id="subtab-keuangan-akun" aria-controls="sub-keuangan-akun">Akun</button>
+        </div>
+        <div role="tabpanel" id="sub-keuangan-ringkasan" data-subpanel="ringkasan" aria-labelledby="subtab-keuangan-ringkasan" tabindex="-1">
+        <section class="card card-focal">
+          <h3>Ringkasan Keuangan
+            <label class="switch h-gap" title="Sertakan nilai saham, reksa dana, dan obligasi"><input type="checkbox" id="finInclStocks"><span class="slider"></span></label>
+            <span class="tiny muted">sertakan nilai investasi</span>
+          </h3>
+          <div class="porto-summary kpi-row has-focal" id="finSummary"></div>
+        </section>
+
+        <section class="card">
+          <h3>ATH Kekayaan (rekor tertinggi) <span class="hlp" data-help="ath" tabindex="0" role="button" aria-label="Penjelasan">?</span></h3>
+          <div id="finAth"></div>
+        </section>
+
+        <section class="card">
+          <h3>Pertumbuhan Kekayaan
+            <select id="finRange" class="h-end" aria-label="Rentang pertumbuhan kekayaan">
+              <option value="30">30 hari</option><option value="90">90 hari</option>
+              <option value="365">1 tahun</option><option value="0" selected>Semua</option>
+            </select>
+          </h3>
+          <div id="finChart" class="chart chart-short priv"></div>
+          <div id="finDelta" class="tiny muted mt-xs"></div>
+        </section>
+
+        <section class="card" id="finAiCard">
+          <h3>Analisis AI Keuangan</h3>
+          <button id="finAiBtn" class="calcBtn ai-btn">Analisis kondisi keuangan saya</button>
+          <div id="finAiOut" class="ai-output tiny muted">AI meninjau kekayaan, arus kas, target, dan hutang. Nyalakan AI di Pengaturan.</div>
+        </section>
+        </div>
+        <div role="tabpanel" id="sub-keuangan-transaksi" data-subpanel="transaksi" aria-labelledby="subtab-keuangan-transaksi" tabindex="-1">
+        <section class="card">
+          <h3>Pemasukan & Pengeluaran</h3>
+          <details class="entry">
+            <summary>Tambah transaksi</summary>
+          <div class="fin-form">
+            <label class="fin-lbl">Tanggal<input id="txDate" type="date"></label>
+            <label class="fin-lbl">Jenis<select id="txType"><option value="in">Pemasukan</option><option value="out">Pengeluaran</option></select></label>
+            <label class="fin-lbl">Nominal<input id="txAmt" type="number" step="any" placeholder="mis. 100000"></label>
+            <label class="fin-lbl">Akun<select id="txAcc"></select></label>
+            <label class="fin-lbl">Kategori<input id="txCat" placeholder="mis. Gaji, Makan"></label>
+            <label class="fin-lbl">Catatan<input id="txNote" placeholder="opsional"></label>
+            <button id="txAdd">+ Tambah</button>
+          </div>
+          </details>
+          <div class="fin-tools">
+            <span class="tiny muted">Ringkasan:</span>
+            <select id="txRange" aria-label="Rentang ringkasan transaksi">
+              <option value="day">Hari ini</option><option value="week">Minggu ini</option>
+              <option value="month" selected>Bulan ini</option><option value="year">Tahun ini</option>
+            </select>
+            <span id="txRangeSummary" class="tiny"></span>
+          </div>
+          <div class="porto-scroll"><table class="porto-table" id="txTable"></table></div>
+        </section>
+        </div>
+        <div role="tabpanel" id="sub-keuangan-rutin" data-subpanel="rutin" aria-labelledby="subtab-keuangan-rutin" tabindex="-1">
+        <section class="card">
+          <h3>Rutin Bulanan <span class="hlp" data-help="rutin" tabindex="0" role="button" aria-label="Penjelasan">?</span></h3>
+          <details class="entry">
+            <summary>Tambah rutin</summary>
+          <div class="fin-form">
+            <label class="fin-lbl">Jenis<select id="recType"><option value="in">Pemasukan</option><option value="out">Pengeluaran</option></select></label>
+            <label class="fin-lbl">Nominal / bulan<input id="recAmt" type="number" step="any" placeholder="mis. 500000"></label>
+            <label class="fin-lbl">Akun<select id="recAcc"></select></label>
+            <label class="fin-lbl">Label<input id="recLabel" placeholder="mis. Gaji, Kos, Langganan"></label>
+            <input id="recDay" type="number" min="1" max="31" step="1" placeholder="Tgl (1-31)" title="Tanggal posting tiap bulan" aria-label="Tanggal posting tiap bulan">
+            <select id="recMode" title="Mode pencatatan" aria-label="Mode pencatatan">
+              <option value="auto">Otomatis</option>
+              <option value="manual">Template (klik)</option>
+            </select>
+            <button id="recAdd">+ Rutin</button>
+          </div>
+          </details>
+          <div id="recList" class="fin-list"></div>
+        </section>
+        </div>
+        <div role="tabpanel" id="sub-keuangan-target" data-subpanel="target" aria-labelledby="subtab-keuangan-target" tabindex="-1">
+        <section class="card">
+          <h3>Target Tabungan</h3>
+          <div class="fin-form">
+            <label class="fin-lbl">Target nabung/bulan<input id="tgtMonth" type="number" step="any" class="priv-inp"></label>
+            <label class="fin-lbl">Target/tahun<input id="tgtYear" type="number" step="any" class="priv-inp"></label>
+            <button id="tgtSave">Simpan</button>
+          </div>
+          <div id="tgtProgress" class="fin-progress"></div>
+        </section>
+
+        <section class="card">
+            <h3>Hutang &amp; Reimburse</h3>
+            <details class="entry">
+              <summary>Tambah catatan</summary>
+            <div class="fin-form">
+              <label class="fin-lbl">Keperluan<input id="debtWho" placeholder="uang saya, belum di-reimburse"></label>
+              <label class="fin-lbl">Nominal<input id="debtAmt" type="number" step="any" placeholder="mis. 500000"></label>
+              <button id="debtAdd">+ Catat</button>
+            </div>
+            </details>
+            <div id="debtList" class="fin-list"></div>
+        </section>
+        </div>
+        <div role="tabpanel" id="sub-keuangan-akun" data-subpanel="akun" aria-labelledby="subtab-keuangan-akun" tabindex="-1">
+        <section class="card">
+          <h3>Akun / Tabungan</h3>
+          <details class="entry">
+            <summary>Tambah akun</summary>
+          <div class="fin-form">
+            <label class="fin-lbl">Nama akun<input id="accName" placeholder="mis. Tabungan 1, Bank, Cash"></label>
+            <label class="fin-lbl">Saldo (Rp)<input id="accBal" type="number" step="any" placeholder="mis. 1000000"></label>
+            <button id="accAdd">+ Akun</button>
+          </div>
+          </details>
+          <div id="accList" class="fin-list"></div>
+        </section>
+
+        <section class="card card-input">
+          <h3>Kalkulator Beli Barang</h3>
+          <div class="fin-form">
+            <label class="fin-lbl">Nama barang<input id="buyName" placeholder="mis. Kulkas"></label>
+            <label class="fin-lbl">Harga<input id="buyPrice" type="number" step="any" placeholder="mis. 2000000"></label>
+            <label class="fin-lbl">Sumber dana<select id="buyAcc"></select></label>
+            <button id="buyCalc">Hitung</button>
+          </div>
+          <div id="buyResult" class="result tiny muted">Masukkan harga & pilih sumber dana.</div>
+          <button id="buyExec" class="calcBtn btn-inline mt-s hidden">Catat sebagai pengeluaran</button>
+        </section>
+        </div>
+      </div>
+
+      <!-- TAB BERITA -->
+      <div id="tabBerita" class="hidden" role="tabpanel" aria-labelledby="tabBtn-berita" tabindex="-1">
+        <h2 class="view-title sr-only">Berita</h2>
+        <div class="news-bar">
+          <button id="newsRefresh" class="ctool">Perbarui berita</button>
+          <span id="newsUpdated" class="tiny muted"></span>
+        </div>
+        <section class="card">
+          <h3>Berita Saham <span id="newsStockTicker" class="muted"></span></h3>
+          <button id="aiNewsStockBtn" class="calcBtn ai-btn">Briefing AI berita saham ini</button>
+          <div id="aiNewsStockOut" class="ai-output tiny muted hidden"></div>
+          <ul id="newsStockList" class="newslist"><li class="tiny muted">Memuat…</li></ul>
+        </section>
+        <section class="card">
+          <h3>Berita Pasar (Makro / Finance) <span class="hlp" data-help="news" tabindex="0" role="button" aria-label="Penjelasan">?</span></h3>
+          <button id="aiNewsMarketBtn" class="calcBtn ai-btn">Briefing AI pasar</button>
+          <div id="aiNewsMarketOut" class="ai-output tiny muted hidden"></div>
+          <ul id="newsMarketList" class="newslist"><li class="tiny muted">Memuat…</li></ul>
+        </section>
+      </div>
+
+      <!-- TAB PASAR -->
+      <div id="tabPasar" class="hidden" role="tabpanel" aria-labelledby="tabBtn-pasar" tabindex="-1">
+        <h2 class="view-title sr-only">Pasar</h2>
+        <div class="subtabs" role="tablist" aria-label="Pasar" id="pasarTabs">
+          <button type="button" role="tab" data-sub="ihsg" id="subtab-pasar-ihsg" aria-controls="sub-pasar-ihsg">IHSG &amp; pasar</button>
+          <button type="button" role="tab" data-sub="rupiah" id="subtab-pasar-rupiah" aria-controls="sub-pasar-rupiah">Rupiah</button>
+          <button type="button" role="tab" data-sub="emas" id="subtab-pasar-emas" aria-controls="sub-pasar-emas">Emas</button>
+        </div>
+        <div role="tabpanel" id="sub-pasar-ihsg" data-subpanel="ihsg" aria-labelledby="subtab-pasar-ihsg" tabindex="-1">
+        <section class="card">
+          <h3>IHSG &amp; Pasar Global</h3>
+          <div class="porto-summary kpi-row has-focal" id="mktQuotes"></div>
+          <div class="fin-form mt-s">
+            <label class="fin-lbl">BI Rate (%, input manual)<input id="biRate" type="number" step="0.05" placeholder="mis. 5.5"></label>
+            <button id="biRateSave" class="ctool">Simpan</button>
+            <span class="tiny muted">BI Rate diisi manual. Klik kartu untuk ganti grafik.</span>
+          </div>
+        </section>
+        <section class="card">
+          <h3>Grafik <span class="hlp" data-help="mktUnits" tabindex="0" role="button" aria-label="Penjelasan">?</span> <span id="mktChartTitle">IHSG</span>
+            <select id="mktRange" class="h-end" aria-label="Rentang grafik pasar">
+              <option value="1mo|1d">1 Bulan</option>
+              <option value="6mo|1d">6 Bulan</option>
+              <option value="1y|1d" selected>1 Tahun</option>
+              <option value="2y|1wk">2 Tahun · Mingguan</option>
+              <option value="5y|1wk">5 Tahun · Mingguan</option>
+              <option value="max|1mo">Maks · Bulanan</option>
+            </select>
+          </h3>
+          <div id="mktChart" class="chart"></div>
+        </section>
+        </div>
+        <div role="tabpanel" id="sub-pasar-rupiah" data-subpanel="rupiah" aria-labelledby="subtab-pasar-rupiah" tabindex="-1">
+        <section class="card">
+          <h3>Rupiah & Kurs</h3>
+          <div class="porto-summary kpi-row has-focal" id="rpQuotes"></div>
+        </section>
+        <section class="card">
+          <h3>Grafik <span class="hlp" data-help="rpChart" tabindex="0" role="button" aria-label="Penjelasan">?</span> <span id="rpChartTitle">USD / IDR</span>
+            <select id="rpRange" class="h-end" aria-label="Rentang grafik kurs rupiah">
+              <option value="1mo|1d">1 Bulan</option>
+              <option value="6mo|1d">6 Bulan</option>
+              <option value="1y|1d" selected>1 Tahun</option>
+              <option value="5y|1wk">5 Tahun</option>
+              <option value="max|1mo">Maks</option>
+            </select>
+          </h3>
+          <div id="rpChart" class="chart"></div>
+        </section>
+        </div>
+        <div role="tabpanel" id="sub-pasar-emas" data-subpanel="emas" aria-labelledby="subtab-pasar-emas" tabindex="-1">
+        <section class="card">
+          <h3>Emas & Logam Mulia</h3>
+          <div class="porto-summary kpi-row has-focal" id="goldQuotes"></div>
+        </section>
+        <section class="card">
+          <h3>Grafik <span class="hlp" data-help="goldIdr" tabindex="0" role="button" aria-label="Penjelasan">?</span> <span id="goldChartTitle">Emas (USD/oz)</span>
+            <select id="goldRange" class="h-end" aria-label="Rentang grafik emas">
+              <option value="1mo|1d">1 Bulan</option>
+              <option value="6mo|1d">6 Bulan</option>
+              <option value="1y|1d" selected>1 Tahun</option>
+              <option value="5y|1wk">5 Tahun</option>
+              <option value="max|1mo">Maks</option>
+            </select>
+          </h3>
+          <div id="goldChart" class="chart"></div>
+        </section>
+        </div>
+      </div>
+
+      <!-- TAB PORTOFOLIO -->
+      <div id="tabPorto" class="hidden" role="tabpanel" aria-labelledby="tabBtn-porto" tabindex="-1">
+        <h2 class="view-title sr-only">Portofolio investasi</h2>
+        <nav id="investmentNav" class="investment-nav" aria-label="Jenis investasi">
+          <button type="button" data-investment-view="summary" aria-pressed="true">Ringkasan</button>
+          <button type="button" data-investment-view="stocks" aria-pressed="false">Saham</button>
+          <button type="button" data-investment-view="funds" aria-pressed="false">Reksa Dana</button>
+          <button type="button" data-investment-view="bonds" aria-pressed="false">Obligasi</button>
+          <button type="button" data-investment-view="ipo" aria-pressed="false">IPO</button>
+        </nav>
+
+        <div data-investment-pane="summary">
+          <section class="card card-focal">
+            <h3>Ringkasan Investasi <span class="hlp" data-help="investSum" tabindex="0" role="button" aria-label="Penjelasan">?</span></h3>
+            <div class="porto-summary kpi-row has-focal" id="investmentSummary"></div>
+            <div id="investmentAllocation" class="investment-allocation"></div>
+          </section>
+        </div>
+
+        <div data-investment-pane="funds" class="hidden">
+          <section class="card">
+            <h3>Reksa Dana <span class="tiny muted">(semua data diisi manual)</span></h3>
+            <details class="entry">
+              <summary>Tambah reksa dana</summary>
+            <div id="fundForm" class="investment-form">
+              <input id="fundId" type="hidden">
+              <label>Nama produk<input id="fundName" autocomplete="off"></label>
+              <label>Kategori<select id="fundCategory"><option>Pasar Uang</option><option>Pendapatan Tetap</option><option>Campuran</option><option>Saham</option><option>Indeks / ETF</option><option>Terproteksi</option><option>Lainnya</option></select></label>
+              <label>Manajer investasi / platform<input id="fundManager" autocomplete="off"></label>
+              <label>Tanggal beli<input id="fundPurchaseDate" type="date"></label>
+              <label>Jumlah unit<input id="fundUnits" type="number" min="0" step="any"></label>
+              <label>Rata-rata NAB/unit<input id="fundAvgNav" class="money" inputmode="numeric"></label>
+              <label>NAB/unit saat ini<input id="fundCurrentNav" class="money" inputmode="numeric"></label>
+              <label>Biaya beli (%)<input id="fundBuyFee" type="number" min="0" max="100" step="any" value="0"></label>
+              <label>Biaya redemption (%)<input id="fundRedeemFee" type="number" min="0" max="100" step="any" value="0"></label>
+              <label>Return 1 bulan (%)<input id="fundReturn1m" type="number" step="any"></label>
+              <label>Return 3 bulan (%)<input id="fundReturn3m" type="number" step="any"></label>
+              <label>Return 6 bulan (%)<input id="fundReturn6m" type="number" step="any"></label>
+              <label>Return YTD (%)<input id="fundReturnYtd" type="number" step="any"></label>
+              <label>Return 1 tahun (%)<input id="fundReturn1y" type="number" step="any"></label>
+              <label>Expense ratio (%)<input id="fundExpenseRatio" type="number" min="0" step="any"></label>
+              <label>AUM (Rp)<input id="fundAum" class="money" inputmode="numeric"></label>
+              <label>Rating risiko<input id="fundRisk" placeholder="mis. Rendah / 3 dari 7"></label>
+            </div>
+            <div id="fundError" class="form-error" role="alert"></div>
+            <div class="investment-actions"><button id="fundSave" type="button">Simpan reksa dana</button><button id="fundCancel" type="button" class="ctool hidden">Batal edit</button></div>
+            </details>
+            <div class="porto-summary kpi-row has-focal" id="fundSummary"></div>
+            <div class="porto-scroll"><table class="porto-table" id="fundInvestmentTable"></table></div>
+          </section>
+        </div>
+
+        <div data-investment-pane="bonds" class="hidden">
+          <section class="card">
+            <h3>Obligasi <span class="tiny muted">(jadwal otomatis, dapat dikoreksi manual)</span></h3>
+            <details class="entry">
+              <summary>Tambah obligasi</summary>
+            <div id="bondForm" class="investment-form">
+              <input id="bondId" type="hidden">
+              <label>Seri / nama<input id="bondName" autocomplete="off"></label>
+              <label>Penerbit<input id="bondIssuer" autocomplete="off"></label>
+              <label>Jenis<select id="bondType"><option>Pemerintah</option><option>Korporasi</option><option>Sukuk</option></select></label>
+              <label>Tanggal beli<input id="bondPurchaseDate" type="date"></label>
+              <label>Kupon pertama<input id="bondFirstCouponDate" type="date"></label>
+              <label>Jatuh tempo<input id="bondMaturityDate" type="date"></label>
+              <label>Nilai nominal (Rp)<input id="bondFaceValue" class="money" inputmode="numeric"></label>
+              <label>Harga beli (% pari)<input id="bondAvgPrice" type="number" min="0" step="any" value="100"></label>
+              <label>Harga saat ini (% pari)<input id="bondCurrentPrice" type="number" min="0" step="any" value="100"></label>
+              <label>Biaya beli (Rp)<input id="bondFees" class="money" inputmode="numeric" value="0"></label>
+              <label>Kupon tahunan (%)<input id="bondCoupon" type="number" min="0" step="any"></label>
+              <label>Frekuensi<select id="bondFrequency"><option value="12">Bulanan</option><option value="4">Triwulanan</option><option value="2" selected>Semesteran</option><option value="1">Tahunan</option></select></label>
+              <label>Pajak kupon (%)<input id="bondTax" type="number" min="0" max="100" step="any" value="10"></label>
+              <label>Current yield manual (%)<input id="bondManualCurrentYield" type="number" step="any" placeholder="opsional"></label>
+              <label>YTM manual (%)<input id="bondManualYtm" type="number" step="any" placeholder="opsional"></label>
+            </div>
+            <div id="bondError" class="form-error" role="alert"></div>
+            <div class="investment-actions"><button id="bondSave" type="button">Simpan obligasi</button><button id="bondCancel" type="button" class="ctool hidden">Batal edit</button></div>
+            </details>
+            <div class="porto-summary kpi-row has-focal" id="bondSummary"></div>
+            <div class="porto-scroll"><table class="porto-table" id="bondTable"></table></div>
+          </section>
+          <section class="card hidden" id="couponCard">
+            <h3>Jadwal Kupon: <span class="hlp" data-help="coupon" tabindex="0" role="button" aria-label="Penjelasan">?</span> <span id="couponBondName">-</span></h3>
+            <div class="porto-scroll"><table class="porto-table" id="couponTable"></table></div>
+          </section>
+        </div>
+
+        <div data-investment-pane="ipo" class="hidden">
+        <section class="card">
+          <h3>Catatan Saham IPO / Posisi <span class="hlp" data-help="ipo" tabindex="0" role="button" aria-label="Penjelasan">?</span> <button id="ipoRefresh" class="ctool h-end">Perbarui harga</button></h3>
+          <details class="entry">
+            <summary>Tambah catatan IPO</summary>
+          <div class="fin-form">
+            <label class="fin-lbl">Kode<input id="ipoTicker" placeholder="mis. RATU"></label>
+            <label class="fin-lbl">Harga beli / IPO<input id="ipoBuy" type="number" step="any" placeholder="mis. 1000"></label>
+            <label class="fin-lbl">Lot<input id="ipoLots" type="number" step="1" placeholder="mis. 10"></label>
+            <button id="ipoAdd">+ Simpan</button>
+          </div>
+          </details>
+          <div class="porto-summary" id="ipoTotals"></div>
+          <div class="porto-scroll"><table class="porto-table" id="ipoTable"></table></div>
+        </section>
+        </div>
+
+        <div data-investment-pane="stocks" class="hidden">
+        <section class="card">
+          <h3>Portofolio Saya <span class="hlp" data-help="pfRows" tabindex="0" role="button" aria-label="Penjelasan">?</span> <span class="tiny muted">(input manual)</span> <button id="pfRefreshBtn" class="ctool h-end" title="Perbarui harga dan analisis" aria-label="Perbarui harga dan analisis">↻</button></h3>
+          <details class="entry">
+            <summary>Tambah saham</summary>
+          <div class="porto-form">
+            <label class="fin-lbl">Kode<input id="pfTicker" placeholder="mis. BBCA" autocomplete="off"></label>
+            <label class="fin-lbl">Harga rata-rata (Rp)<input id="pfAvg" type="number" step="any" placeholder="mis. 9000"></label>
+            <label class="fin-lbl">Jumlah lot<input id="pfLots" type="number" step="1" placeholder="mis. 10"></label>
+            <button id="pfAddBtn">+ Tambah</button>
+          </div>
+          </details>
+          <div class="porto-summary kpi-row has-focal" id="pfSummary"></div>
+          <div class="porto-scroll"><table class="porto-table" id="pfTable"></table></div>
+        </section>
+
+        <section class="card">
+          <h3>Kas RDN <span class="tiny muted">(sisa uang tunai di broker / Rekening Dana Nasabah)</span></h3>
+          <div class="fin-form">
+            <label class="fin-lbl">Sisa dana RDN (Rp)<input id="rdnInput" class="priv-inp" type="number" step="any" placeholder="mis. 5000000"></label>
+            <button id="rdnSave">Simpan</button>
+            <button id="rdnClear" class="ctool">Kosongkan</button>
+          </div>
+          <div class="fin-form mt-s">
+            <label class="fin-lbl">Transfer RDN ke rekening<select id="rdnAcc"></select></label>
+            <label class="fin-lbl">Jumlah (Rp)<input id="rdnAmt" type="number" step="any" placeholder="mis. 1000000"></label>
+            <button id="rdnTransfer">Transfer</button>
+          </div>
+          <div id="rdnInfo" class="tiny muted"></div>
+        </section>
+
+        <section class="card">
+          <h3>Kinerja vs IHSG <span class="hlp" data-help="perf" tabindex="0" role="button" aria-label="Penjelasan">?</span> <select id="perfRange" class="h-end" aria-label="Rentang kinerja vs IHSG">
+              <option value="1mo">1 Bulan</option>
+              <option value="3mo">3 Bulan</option>
+              <option value="6mo">6 Bulan</option>
+              <option value="ytd">YTD</option>
+              <option value="1y" selected>1 Tahun</option>
+              <option value="2y">2 Tahun</option>
+            </select>
+          </h3>
+          <div class="porto-summary" id="perfSummary"></div>
+          <div class="porto-scroll"><table class="porto-table" id="perfTable"></table></div>
+        </section>
+
+        <section class="card">
+          <h3>Nilai Portofolio & Modal <span class="hlp" data-help="pval" tabindex="0" role="button" aria-label="Penjelasan">?</span> <select id="pvalRange" class="h-end" aria-label="Rentang nilai portofolio dan modal">
+              <option value="1mo">1 Bulan</option>
+              <option value="3mo" selected>3 Bulan</option>
+              <option value="6mo">6 Bulan</option>
+              <option value="ytd">YTD</option>
+              <option value="1y">1 Tahun</option>
+            </select>
+          </h3>
+          <div id="pvalChart" class="chart priv"></div>
+        </section>
+
+        <section class="card">
+          <h3>Dividen Diterima <span class="hlp" data-help="divRecv" tabindex="0" role="button" aria-label="Penjelasan">?</span> <span class="tiny muted">(aktual, menambah RDN atau rekening)</span></h3>
+          <details class="entry">
+            <summary>Catat dividen</summary>
+          <div class="fin-form">
+            <label class="fin-lbl">Tanggal<input id="divDate" type="date"></label>
+            <label class="fin-lbl">Kode<input id="divTicker" placeholder="mis. BBCA"></label>
+            <label class="fin-lbl">Jumlah diterima (Rp)<input id="divAmount" type="number" step="any" placeholder="mis. 150000"></label>
+            <label class="fin-lbl">Masuk ke<select id="divDest"></select></label>
+            <button id="divAdd">+ Catat</button>
+          </div>
+          </details>
+          <div class="porto-summary" id="divRecvSummary"></div>
+          <div class="porto-scroll"><table class="porto-table" id="divRecvTable"></table></div>
+        </section>
+
+        <section class="card">
+          <h3>Jurnal Transaksi & Realized P/L <span class="hlp" data-help="journal" tabindex="0" role="button" aria-label="Penjelasan">?</span></h3>
+          <details class="entry">
+            <summary>Tambah transaksi</summary>
+          <div class="fin-form">
+            <label class="fin-lbl">Tanggal<input id="jrDate" type="date"></label>
+            <label class="fin-lbl">Sisi<select id="jrSide"><option value="buy">Beli</option><option value="sell">Jual</option></select></label>
+            <label class="fin-lbl">Kode<input id="jrTicker" placeholder="mis. BBCA"></label>
+            <label class="fin-lbl">Lot<input id="jrLots" type="number" step="1" placeholder="mis. 10"></label>
+            <label class="fin-lbl">Harga<input id="jrPrice" class="money" type="text" inputmode="numeric" placeholder="mis. 9.000"></label>
+            <label class="fin-lbl">Fee (Rp, opsional)<input id="jrFee" class="money" type="text" inputmode="numeric" placeholder="0"></label>
+            <button id="jrAdd">+ Catat</button>
+          </div>
+          </details>
+          <div class="porto-summary" id="jrSummary"></div>
+          <h4 class="alloc-sub">Posisi terbuka (harga rata-rata otomatis)</h4>
+          <div class="porto-scroll"><table class="porto-table" id="jrPosTable"></table></div>
+          <div class="jr-sync-row">
+            <button id="jrToPorto" class="ctool">Perbarui Portofolio dari jurnal</button>
+            <label class="auto-toggle" title="Setiap mencatat transaksi, Portofolio ikut diperbarui otomatis dari posisi jurnal">
+              <input type="checkbox" id="jrAutoSync"> Otomatis
+            </label>
+          </div>
+          <h4 class="alloc-sub">Riwayat transaksi</h4>
+          <div class="porto-scroll"><table class="porto-table" id="jrTable"></table></div>
+        </section>
+
+        <section class="card hidden" id="pfAllocCard">
+          <h3>Alokasi per Sektor & Bobot</h3>
+          <div class="alloc-wrap">
+            <div class="alloc-donut">
+              <div class="donut" id="pfDonut"></div>
+              <div class="donut-hole"><b id="pfDonutTotal" class="priv">-</b><span>Total Nilai</span></div>
+            </div>
+            <div class="alloc-legend" id="pfAllocLegend"></div>
+          </div>
+          <h4 class="alloc-sub">Bobot per saham</h4>
+          <div class="wbars" id="pfWeightBars"></div>
+        </section>
+
+        <section class="card hidden" id="pfDivCard">
+          <h3>Proyeksi Dividen <span class="hlp" data-help="divProj" tabindex="0" role="button" aria-label="Penjelasan">?</span></h3>
+          <div class="porto-summary" id="pfDivTotals"></div>
+          <div class="porto-scroll"><table class="porto-table" id="pfDivTable"></table></div>
+          <div class="fin-form mt-s">
+            <label class="fin-lbl">Masukkan ke Keuangan via akun<select id="pfDivAcc"></select></label>
+            <button id="pfDivAddBtn">+ Pemasukan rutin (estimasi bulanan)</button>
+          </div>
+        </section>
+
+        <section class="card hidden" id="pfAgendaCard">
+          <h3>Agenda Ex-Dividend <span class="hlp" data-help="agenda" tabindex="0" role="button" aria-label="Penjelasan">?</span></h3>
+          <div id="pfAgenda" class="agenda-list"></div>
+        </section>
+
+        <section class="card hidden" id="pfDetailCard">
+          <h3>Analisis Posisi <span id="pfDetailName">-</span></h3>
+          <div id="pfDetail"></div>
+          <button id="pfAiBtn" class="calcBtn ai-btn mt-s">Analisis AI posisi ini</button>
+          <div id="pfAiOut" class="ai-output tiny muted hidden"></div>
+        </section>
+        </div>
+      </div>
+
+      <!-- TAB PENGATURAN -->
+      <div id="tabProfil" class="hidden" role="region" aria-labelledby="settingsTitle" tabindex="-1">
+        <h2 id="settingsTitle" class="view-title">Pengaturan</h2>
+        <div class="settings-wrap">
+          <nav class="set-nav" id="setNav" role="tablist" aria-label="Bagian pengaturan" aria-orientation="vertical">
+            <button type="button" class="set-navbtn active" id="setBtn-profil" role="tab" data-pane="profil" aria-controls="setPane-profil" aria-selected="true" tabindex="0">Profil &amp; brand</button>
+            <button type="button" class="set-navbtn" id="setBtn-tampilan" role="tab" data-pane="tampilan" aria-controls="setPane-tampilan" aria-selected="false" tabindex="-1">Tampilan</button>
+            <button type="button" class="set-navbtn" id="setBtn-tataletak" role="tab" data-pane="tataletak" aria-controls="setPane-tataletak" aria-selected="false" tabindex="-1">Tata letak</button>
+            <button type="button" class="set-navbtn" id="setBtn-keamanan" role="tab" data-pane="keamanan" aria-controls="setPane-keamanan" aria-selected="false" tabindex="-1">Keamanan</button>
+            <button type="button" class="set-navbtn" id="setBtn-data" role="tab" data-pane="data" aria-controls="setPane-data" aria-selected="false" tabindex="-1">Data &amp; cadangan</button>
+            <button type="button" class="set-navbtn" id="setBtn-tentang" role="tab" data-pane="tentang" aria-controls="setPane-tentang" aria-selected="false" tabindex="-1">Tentang</button>
+          </nav>
+          <div class="set-panes">
+
+            <div class="set-pane" data-pane="profil" id="setPane-profil" role="tabpanel" aria-labelledby="setBtn-profil">
+              <section class="card">
+                <h3>Profil &amp; Branding</h3>
+                <div class="set-grid">
+                  <div class="set-field"><label for="profName">Nama tampilan (sapaan)</label><input id="profName" type="text" placeholder="Nama Anda" maxlength="40"></div>
+                  <div class="set-field"><label for="brandName">Nama aplikasi (brand)</label><input id="brandName" type="text" placeholder="Dashboard Saham" maxlength="40" value="{{ app_name }}"></div>
+                </div>
+                <button id="profSave" class="calcBtn btn-inline mt-m">Simpan profil &amp; brand</button>
+                <p class="tiny muted">Nama aplikasi tampil di header, judul tab, &amp; layar login.</p>
+                <div class="img-row mt-l">
+                  <div class="img-field">
+                    <span class="set-lbl">Logo aplikasi</span>
+                    <div class="img-edit"><img id="logoPreview" class="img-thumb" src="/static/icon-192.png" alt="Logo aplikasi">
+                      <div class="img-btns">
+                        <label class="ctool">Ganti logo<input id="logoFile" type="file" accept="image/*" hidden></label>
+                        <button id="logoRemove" class="ctool">Default</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="img-field">
+                    <span class="set-lbl">Foto profil</span>
+                    <div class="img-edit"><img id="avatarPreview" class="img-thumb round" alt="Foto profil" hidden>
+                      <div class="img-btns">
+                        <label class="ctool">Unggah foto<input id="avatarFile" type="file" accept="image/*" hidden></label>
+                        <button id="avatarRemove" class="ctool">Hapus</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <p class="tiny muted card-note">Logo dipakai sebagai ikon tab browser. Logo &amp; foto otomatis diperkecil dan tersinkron antar perangkat.</p>
+              </section>
+            </div>
+
+            <div class="set-pane hidden" data-pane="tampilan" id="setPane-tampilan" role="tabpanel" aria-labelledby="setBtn-tampilan">
+              <section class="card">
+                <h3>AI</h3>
+                <div class="layout-item">
+                  <span class="lname">Analisis dan ringkasan AI <span id="aiStatus" class="tiny muted"></span></span>
+                  <label class="switch" title="Nyalakan / matikan AI"><input type="checkbox" id="aiToggle"><span class="slider"></span></label>
+                </div>
+              </section>
+              <section class="card">
+                <h3>Tema (warna)</h3>
+                <div class="theme-grid" id="themeGrid"></div>
+              </section>
+              <section class="card">
+                <h3>Ukuran Teks</h3>
+                <div class="set-field narrow"><label for="fontSizeSel">Ukuran teks</label>
+                  <select id="fontSizeSel">
+                    <option value="small">Kecil</option>
+                    <option value="normal">Normal (default)</option>
+                    <option value="large">Besar</option>
+                    <option value="xlarge">Ekstra besar</option>
+                  </select>
+                </div>
+                <div id="fontPreview">Rp1.234.567 · BBCA +4,12% · Analisis Saham 0123456789</div>
+                <p class="tiny muted card-note">Berlaku untuk teks, label, tombol, dan angka di seluruh dashboard.</p>
+              </section>
+              <section class="card">
+                <h3>Photo Card Dekorasi</h3>
+                <p class="tiny muted">Tambahkan foto dekoratif di sisi dashboard. Kartu disembunyikan bila layar tidak cukup lebar.</p>
+                <div class="photo-settings-grid">
+                  <article class="photo-setting" data-photo-setting="left">
+                    <div class="photo-setting-head"><strong>Sisi kiri</strong><span id="photoLeftStatus" class="tiny muted">Memeriksa gambar...</span></div>
+                    <div class="photo-setting-body">
+                      <div class="photo-setting-preview">
+                        <img id="photoLeftPreview" alt="Pratinjau photo card kiri" hidden>
+                        <span id="photoLeftEmpty" class="tiny muted">Belum ada gambar</span>
+                      </div>
+                      <div class="photo-setting-controls">
+                        <label class="photo-toggle"><input id="photoLeftEnabled" type="checkbox"> Tampilkan sisi kiri</label>
+                        <div class="set-field"><label for="photoLeftSize">Ukuran kartu</label>
+                          <select id="photoLeftSize">
+                            <option value="small">Kecil</option><option value="medium">Sedang (default)</option><option value="large">Besar</option>
+                          </select>
+                        </div>
+                        <div class="img-btns">
+                          <label class="ctool">Unggah / ganti<input id="photoLeftFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden></label>
+                          <button id="photoLeftRemove" class="ctool" type="button">Hapus</button>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                  <article class="photo-setting" data-photo-setting="right">
+                    <div class="photo-setting-head"><strong>Sisi kanan</strong><span id="photoRightStatus" class="tiny muted">Memeriksa gambar...</span></div>
+                    <div class="photo-setting-body">
+                      <div class="photo-setting-preview">
+                        <img id="photoRightPreview" alt="Pratinjau photo card kanan" hidden>
+                        <span id="photoRightEmpty" class="tiny muted">Belum ada gambar</span>
+                      </div>
+                      <div class="photo-setting-controls">
+                        <label class="photo-toggle"><input id="photoRightEnabled" type="checkbox"> Tampilkan sisi kanan</label>
+                        <div class="set-field"><label for="photoRightSize">Ukuran kartu</label>
+                          <select id="photoRightSize">
+                            <option value="small">Kecil</option><option value="medium">Sedang (default)</option><option value="large">Besar</option>
+                          </select>
+                        </div>
+                        <div class="img-btns">
+                          <label class="ctool">Unggah / ganti<input id="photoRightFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden></label>
+                          <button id="photoRightRemove" class="ctool" type="button">Hapus</button>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                </div>
+                <p class="tiny muted photo-original-note">JPEG, PNG, WebP, atau GIF, maksimal 7 MB per sisi. Tampilan dapat dipotong agar pas di bingkai, tetapi file asli tidak diubah.</p>
+              </section>
+              <section class="card">
+                <h3>Kepadatan</h3>
+                <div class="set-field narrow"><label for="densitySel">Jarak antar elemen</label>
+                  <select id="densitySel">
+                    <option value="comfortable">Lega (default)</option>
+                    <option value="compact">Rapat</option>
+                  </select>
+                </div>
+                <p class="tiny muted card-note">Mode rapat memperkecil jarak & padding agar lebih banyak info tampil sekaligus.</p>
+              </section>
+            </div>
+
+            <div class="set-pane hidden" data-pane="tataletak" id="setPane-tataletak" role="tabpanel" aria-labelledby="setBtn-tataletak">
+              <section class="card">
+                <h3>Urutan &amp; Tampilkan Tab</h3>
+                <p class="tiny muted layout-hint">Seret (☰) untuk mengubah urutan tab, dan matikan toggle untuk menyembunyikan tab. Berlaku untuk navigasi samping.</p>
+                <div class="layout-list" id="tabConfigList"></div>
+              </section>
+              <section class="card">
+                <h3>Widget Home</h3>
+                <p class="tiny muted layout-hint">Atur urutan &amp; tampilkan/sembunyikan widget di halaman Home.</p>
+                <div class="layout-list" id="homeConfigList"></div>
+              </section>
+            </div>
+
+            <div class="set-pane hidden" data-pane="keamanan" id="setPane-keamanan" role="tabpanel" aria-labelledby="setBtn-keamanan">
+              <section class="card">
+                <h3>Sesi</h3>
+                <p id="sessionInfo" class="tiny muted">Sesi login berlaku 12 jam di browser ini.</p>
+                <button id="logoutBtn" type="button" class="ctool">Keluar dari dashboard</button>
+              </section>
+              <section class="card">
+                <h3>Password Pemilik</h3>
+                <form id="ownerPassForm" novalidate>
+                  <div class="set-grid">
+                    <div class="set-field" id="ownerCurrentField"><label for="ownerPassCurrent">Password saat ini</label><input id="ownerPassCurrent" type="password" autocomplete="current-password"></div>
+                    <div class="set-field"><label for="newPass">Password baru</label><input id="newPass" type="password" minlength="8" autocomplete="new-password"></div>
+                    <div class="set-field"><label for="newPass2">Ulangi password baru</label><input id="newPass2" type="password" minlength="8" autocomplete="new-password"></div>
+                  </div>
+                  <button id="passSave" type="submit" class="calcBtn btn-inline mt-m">Ubah password pemilik</button>
+                  <p id="passMsg" class="tiny form-msg" role="status"></p>
+                </form>
+                <p class="tiny muted card-note">Dipakai untuk masuk dari semua perangkat di jaringan. Minimal 8 karakter. Mengganti password mengeluarkan perangkat lain.</p>
+              </section>
+              <section class="card" id="adminConfigCard">
+                <h3>Password Administrator</h3>
+                <p class="tiny muted">Administrator masuk lewat pilihan "Masuk sebagai administrator" di halaman login, lalu dapat mereset password pemilik di atas tanpa password lama.</p>
+                <p id="adminStatus" class="tiny" role="status"></p>
+                <form id="adminPassForm" hidden novalidate>
+                  <div class="set-grid">
+                    <div class="set-field"><label for="adminPassCurrent">Password administrator saat ini</label><input id="adminPassCurrent" type="password" autocomplete="current-password"></div>
+                    <div class="set-field"><label for="adminPassSetting">Password administrator baru</label><input id="adminPassSetting" type="password" minlength="8" autocomplete="new-password"></div>
+                  </div>
+                  <button id="adminPassBtn" type="submit" class="calcBtn btn-inline mt-m">Ubah password administrator</button>
+                  <p id="adminPassMsg" class="tiny form-msg" role="status"></p>
+                </form>
+              </section>
+            </div>
+
+            <div class="set-pane hidden" data-pane="data" id="setPane-data" role="tabpanel" aria-labelledby="setBtn-data">
+              <section class="card">
+                <h3>Cadangkan / Pulihkan Data</h3>
+                <p class="tiny muted">Unduh seluruh data Anda (watchlist, portofolio, keuangan, jurnal, dll) sebagai file, atau pulihkan dari file backup.</p>
+                <div class="danger-row mt-s">
+                  <button id="exportBtn" class="calcBtn btn-inline">Export data (.json)</button>
+                  <button id="importBtn" class="ctool">Import data…</button>
+                  <input id="importFile" type="file" accept="application/json,.json" aria-label="Pilih file backup untuk impor" hidden>
+                </div>
+              </section>
+              <section class="card" id="dangerCard">
+                <h3>Hapus Semua Data</h3>
+                <p class="tiny">Menghapus watchlist, portofolio, keuangan, jurnal, benchmark, profil, dan setelan lain dari server dan semua browser yang tersinkron. Password dan photo card tidak ikut terhapus. <span class="warn">Tidak bisa dibatalkan, jadi export data dulu bila perlu.</span></p>
+                <label class="tiny confirm-label" for="resetConfirm">Ketik <code>HAPUS SEMUA</code> untuk konfirmasi:</label>
+                <div class="danger-row">
+                  <input id="resetConfirm" type="text" placeholder="HAPUS SEMUA" autocomplete="off">
+                  <button id="resetAllBtn" class="danger-btn" disabled>Hapus &amp; Reset Semua</button>
+                </div>
+              </section>
+            </div>
+
+            <div class="set-pane hidden" data-pane="tentang" id="setPane-tentang" role="tabpanel" aria-labelledby="setBtn-tentang">
+              <section class="card">
+                <h3>Tentang</h3>
+                <p class="about-name"><b id="aboutBrand">{{ app_name }}</b> <span class="tiny muted">{{ app_credit }} · versi {{ app_version }}</span></p>
+                <p class="tiny about-text">Dashboard analisis saham IDX dan pengelolaan keuangan pribadi, dengan dua ruang kerja: <b>Investasi</b> (analisis, pasar, portofolio, screener, alat, berita) dan <b>Pribadi</b> (keuangan, barang). AI opsional. Data disimpan di komputer yang menjalankan aplikasi ini dan tersinkron ke setiap perangkat yang masuk.</p>
+                <h4>Sumber data</h4>
+                <p class="tiny about-text">Harga, fundamental, dan dividen dari Yahoo Finance lewat yfinance, <b>tertunda sekitar 15 menit</b>. Berita dari Google News RSS; judul dan artikel milik penerbitnya.</p>
+                <h4>Penafian</h4>
+                <p class="tiny about-text">Alat edukasi, bukan rekomendasi atau nasihat investasi. Setiap keputusan dan risikonya ada pada Anda.</p>
+                <h4>Kredit</h4>
+                <ul class="tiny about-credits">
+                  <li>Grafik: TradingView Lightweight Charts™, Copyright (c) 2023 TradingView, Inc., <a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer">tradingview.com</a> (Apache License 2.0)</li>
+                  <li>Huruf: IBM Plex Sans, © 2017 IBM Corp. (SIL Open Font License 1.1)</li>
+                  <li>Data pasar: yfinance (Apache License 2.0), proyek independen yang tidak berafiliasi dengan Yahoo</li>
+                </ul>
+              </section>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <footer class="app-footer">Alat edukasi, bukan rekomendasi investasi.</footer>
+    </div>
+    </div>
+    <aside id="photoCardRight" class="decor-photo-card" data-side="right" data-size="medium" aria-hidden="true">
+      <img id="photoCardRightImg" alt="">
+    </aside>
+    </main>
+  </section>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<div id="toastLive" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+<script src="/static/money.js?v={{ asset_v('money.js') }}"></script>
+<script src="/static/subtabs.js?v={{ asset_v('subtabs.js') }}"></script>
+<script src="/static/investments-core.js?v={{ asset_v('investments-core.js') }}"></script>
+<script src="/static/app.js?v={{ asset_v('app.js') }}"></script>
+<script src="/static/layout.js?v={{ asset_v('layout.js') }}"></script>
+<script src="/static/finance.js?v={{ asset_v('finance.js') }}"></script>
+<script src="/static/screener.js?v={{ asset_v('screener.js') }}"></script>
+<script src="/static/journal.js?v={{ asset_v('journal.js') }}"></script>
+<script src="/static/market.js?v={{ asset_v('market.js') }}"></script>
+<script src="/static/investments.js?v={{ asset_v('investments.js') }}"></script>
+<script src="/static/home.js?v={{ asset_v('home.js') }}"></script>
+<script src="/static/calc.js?v={{ asset_v('calc.js') }}"></script>
+<script src="/static/ara.js?v={{ asset_v('ara.js') }}"></script>
+<script src="/static/barang.js?v={{ asset_v('barang.js') }}"></script>
+<script src="/static/autocomplete.js?v={{ asset_v('autocomplete.js') }}"></script>
+<script src="/static/ready.js?v={{ asset_v('ready.js') }}"></script>
+</body>
+</html>

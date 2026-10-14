@@ -1,0 +1,35 @@
+# Secrets and runtime data: never publish these
+.env
+.env.*
+!.env.example
+data/
+*.corrupt-*
+.local-backups/
+*.bak
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node (only used for the JS tests)
+node_modules/
+
+# AI assistants and tool workspaces
+.superpowers/
+.claude/
+.kiro/
+.agents/
+shots/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
